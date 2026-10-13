@@ -165,7 +165,7 @@ jobs:
           var bibleListSyncedRoute = '';
           var bibleListSyncQueued = false;
           function bibleLabel(el) {
-            return (el && (el.innerText || el.textContent) || '').replace(/[\\s\\u00a0]+/g, '').trim();
+            return (el && (el.innerText || el.textContent) || '').replace(/[\s\u00a0]+/g, '').trim();
           }
           function bibleNodeVisible(el) {
             if (!el || !el.getClientRects || !el.getClientRects().length) return false;
@@ -173,7 +173,7 @@ jobs:
             return s.display !== 'none' && s.visibility !== 'hidden' && Number(s.opacity || 1) > 0;
           }
           function syncBibleBookListScroll() {
-            var m = location.pathname.match(/^\\/bible\\/(\\d+)(?:\\/(\\d+))?(?:\\/|$)/i);
+            var m = location.pathname.match(/^\/bible\/(\d+)(?:\/(\d+))?(?:\/|$)/i);
             if (!m) { bibleListSyncedRoute = ''; return; }
             var routeKey = m[1] + '/' + (m[2] || '');
             var book = bibleBookNames[Number(m[1]) - 1];
