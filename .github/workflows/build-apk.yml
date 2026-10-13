@@ -95,7 +95,18 @@ jobs:
               source = source.replace(reading_match, reading_helpers, 1)
           source = source.replace("if (isBiblePath(location.pathname)) {", "if (isBibleReadingPath(location.pathname)) {", 1)
           source = source.replace("return isBiblePath(p) ? p : null;", "return isBibleReadingPath(p) ? p : null;", 1)
-          source = source.replace("if (label.indexOf('성경') === -1 || isBiblePath(location.pathname)) return;", "if (label.indexOf('성경') === -1 || isBibleReadingPath(location.pathname)) return;", 1)
+          source = source.replace(
+              "if (label.indexOf('성경') === -1 || isBiblePath(location.pathname)) return;",
+              """if (label.indexOf('성경') === -1) return;
+            if (isBibleReadingPath(location.pathname)) {
+              saveCurrent();
+              event.preventDefault();
+              event.stopPropagation();
+              if (event.stopImmediatePropagation) event.stopImmediatePropagation();
+              return;
+            }""",
+              1
+          )
           source = source.replace(
               "          window.addEventListener('popstate', saveCurrent);\n",
               "          window.addEventListener('popstate', saveCurrent);\n"
@@ -125,7 +136,7 @@ jobs:
           '''
           source = source.replace(old_listener, '')
           # Route the worship tab to the user's YouTube playlist from inside the existing WebView.
-          marker = "if (label.indexOf('성경') === -1 || isBibleReadingPath(location.pathname)) return;"
+          marker = "if (label.indexOf('성경') === -1) return;"
           worship_route = """if (label.indexOf('예배') !== -1) {
                       event.preventDefault();
                       event.stopPropagation();
