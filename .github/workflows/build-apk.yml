@@ -76,6 +76,21 @@ jobs:
                   raise SystemExit(f'Expected one MainActivity.kt, found {len(candidates)}')
               p = candidates[0]
           source = p.read_text()
+          # Accept every Bible route shape, not only numeric book/chapter segments.
+          old_route_match = r"function isBiblePath(path) { return /^\\/bible\\/\\d+\\/\\d+/.test(path || ''); }"
+          new_route_match = r"function isBiblePath(path) { return /^\\/bible(?:\\/|$)/i.test(path || ''); }"
+          if old_route_match in source:
+              source = source.replace(old_route_match, new_route_match, 1)
+          elif new_route_match not in source:
+              raise SystemExit('Could not locate Bible route matcher; refusing unsafe patch.')
+          source = source.replace(
+              "          window.addEventListener('popstate', saveCurrent);\\n",
+              "          window.addEventListener('popstate', saveCurrent);\\n"
+              "          window.addEventListener('hashchange', saveCurrent);\\n"
+              "          window.addEventListener('pagehide', saveCurrent);\\n"
+              "          document.addEventListener('visibilitychange', function() { if (document.visibilityState === 'hidden') saveCurrent(); });\\n",
+              1
+          )
           source = source.replace(
               'import android.os.Bundle\n',
               'import android.os.Bundle\nimport android.os.Build\nimport android.view.WindowInsets\nimport android.widget.FrameLayout\n',
