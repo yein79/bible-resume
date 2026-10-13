@@ -167,3 +167,5 @@ jobs:
           path: project/**/build/outputs/apk/debug/*.apk
           if-no-files-found: error
           retention-days: 14
+
+# Trigger another build attempt for the current APK patch.
