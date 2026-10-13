@@ -149,6 +149,79 @@ jobs:
               source = source.replace(marker, worship_route + marker, 1)
           elif marker not in source:
               raise SystemExit('Could not locate Bible-tab click handler marker; refusing unsafe patch.')
+          # When the book drawer opens, scroll its list to the book in the current reading route.
+          # This fixes the list's scroll position, not just the saved URL.
+          scroll_marker = "          var previous = location.pathname + location.search;"
+          scroll_code = r"""          var bibleBookNames = [
+            '창세기','출애굽기','레위기','민수기','신명기','여호수아','사사기','룻기',
+            '사무엘상','사무엘하','열왕기상','열왕기하','역대상','역대하','에스라','느헤미야','에스더',
+            '욥기','시편','잠언','전도서','아가','이사야','예레미야','예레미야애가','에스겔','다니엘',
+            '호세아','요엘','아모스','오바댜','요나','미가','나훔','하박국','스바냐','학개','스가랴','말라기',
+            '마태복음','마가복음','누가복음','요한복음','사도행전','로마서','고린도전서','고린도후서','갈라디아서',
+            '에베소서','빌립보서','골로새서','데살로니가전서','데살로니가후서','디모데전서','디모데후서','디도서',
+            '빌레몬서','히브리서','야고보서','베드로전서','베드로후서','요한일서','요한이서','요한삼서','유다서','요한계시록'
+          ];
+          var bibleListWasOpen = false;
+          var bibleListSyncedRoute = '';
+          function isVisibleBibleListNode(el) {
+            if (!el || !el.getClientRects || !el.getClientRects().length) return false;
+            var style = window.getComputedStyle(el);
+            return style.display !== 'none' && style.visibility !== 'hidden';
+          }
+          function syncBibleBookListScroll() {
+            var route = location.pathname;
+            var match = route.match(/^\/bible\/(\d+)\/\d+(?:\/|$)/i);
+            if (!match) {
+              bibleListWasOpen = false;
+              bibleListSyncedRoute = '';
+              return;
+            }
+            var nodes = document.querySelectorAll('button,a,[role="button"],[role="tab"],li');
+            var items = [];
+            var seen = {};
+            Array.prototype.forEach.call(nodes, function(el) {
+              if (!isVisibleBibleListNode(el)) return;
+              var label = (el.innerText || el.textContent || '').replace(/\s+/g, '').trim();
+              if (bibleBookNames.indexOf(label) === -1) return;
+              items.push({el: el, label: label});
+              seen[label] = true;
+            });
+            var visibleBookCount = Object.keys(seen).length;
+            var listOpen = visibleBookCount >= 5;
+            if (!listOpen) {
+              bibleListWasOpen = false;
+              return;
+            }
+            if (bibleListWasOpen && bibleListSyncedRoute === route) return;
+            var bookIndex = Number(match[1]) - 1;
+            var currentBook = bibleBookNames[bookIndex];
+            if (!currentBook) return;
+            var target = null;
+            for (var i = 0; i < items.length; i++) {
+              if (items[i].label === currentBook) {
+                target = items[i].el;
+                break;
+              }
+            }
+            if (target) {
+              target.scrollIntoView({block: 'nearest', inline: 'nearest'});
+              bibleListSyncedRoute = route;
+            }
+            bibleListWasOpen = true;
+          }
+          var bibleListObserver = new MutationObserver(function() {
+            syncBibleBookListScroll();
+          });
+          bibleListObserver.observe(document.documentElement, {
+            childList: true, subtree: true, attributes: true,
+            attributeFilter: ['class','style','aria-hidden','aria-selected']
+          });
+          syncBibleBookListScroll();
+"""
+          if "function syncBibleBookListScroll()" not in source:
+              if scroll_marker not in source:
+                  raise SystemExit('Could not locate safe route-monitor insertion point.')
+              source = source.replace(scroll_marker, scroll_code + scroll_marker, 1)
           old_content = '        setContentView(webView)\n'
           new_content = '''        val root = FrameLayout(this)
                   root.setOnApplyWindowInsetsListener { view, insets ->
