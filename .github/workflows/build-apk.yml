@@ -1,4 +1,5 @@
 name: Build Android APK
+# Rebuild final APK with Bible-location persistence fix
 
 on:
   workflow_dispatch:
