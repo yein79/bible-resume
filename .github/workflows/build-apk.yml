@@ -64,19 +64,16 @@ jobs:
                   raise SystemExit(f'Expected one MainActivity.kt, found {len(candidates)}')
               p = candidates[0]
           source = p.read_text()
-          anchor = '        webView = WebView(this)\n'
-          patch = '''        webView = WebView(this)
-        // Keep WebView content clear of Android's status and navigation bars.
-        webView.setOnApplyWindowInsetsListener { view, insets ->
-            view.setPadding(
-                insets.systemWindowInsetLeft,
-                insets.systemWindowInsetTop,
-                insets.systemWindowInsetRight,
-                insets.systemWindowInsetBottom
-            )
-            insets
-        }
-'''
+          anchor = '        webView = WebView(this)\\n'
+          patch_lines = [
+              '        webView = WebView(this)',
+              '        // Keep WebView content clear of Android system bars.',
+              '        webView.setOnApplyWindowInsetsListener { view, insets ->',
+              '            view.setPadding(insets.systemWindowInsetLeft, insets.systemWindowInsetTop, insets.systemWindowInsetRight, insets.systemWindowInsetBottom)',
+              '            insets',
+              '        }',
+          ]
+          patch = '\\n'.join(patch_lines) + '\\n'
           if 'setOnApplyWindowInsetsListener' not in source:
               if anchor not in source:
                   raise SystemExit('Could not locate WebView initialization; refusing unsafe patch.')
