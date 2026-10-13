@@ -125,7 +125,7 @@ jobs:
           '''
           source = source.replace(old_listener, '')
           # Route the worship tab to the user's YouTube playlist from inside the existing WebView.
-          marker = "if (label.indexOf('성경') === -1 || isBiblePath(location.pathname)) return;"
+          marker = "if (label.indexOf('성경') === -1 || isBibleReadingPath(location.pathname)) return;"
           worship_route = """if (label.indexOf('예배') !== -1) {
                       event.preventDefault();
                       event.stopPropagation();
