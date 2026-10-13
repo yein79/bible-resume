@@ -96,6 +96,20 @@ jobs:
                   }
           '''
           source = source.replace(old_listener, '')
+          # Route the worship tab to the user's YouTube playlist from inside the existing WebView.
+          marker = "if (label.indexOf('성경') === -1 || isBiblePath(location.pathname)) return;"
+          worship_route = """if (label.indexOf('예배') !== -1) {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      if (event.stopImmediatePropagation) event.stopImmediatePropagation();
+                      location.href = 'https://youtube.com/playlist?list=PLCNxYye_JJpZXsl4cQEjzBWRUFSCb2MCE';
+                      return;
+                    }
+                    """
+          if marker in source and worship_route.strip() not in source:
+              source = source.replace(marker, worship_route + marker, 1)
+          elif marker not in source:
+              raise SystemExit('Could not locate Bible-tab click handler marker; refusing unsafe patch.')
           old_content = '        setContentView(webView)\n'
           new_content = '''        val root = FrameLayout(this)
                   root.setOnApplyWindowInsetsListener { view, insets ->
