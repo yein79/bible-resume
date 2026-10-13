@@ -163,7 +163,11 @@ jobs:
             '빌레몬서','히브리서','야고보서','베드로전서','베드로후서','요한일서','요한이서','요한삼서','유다서','요한계시록'
           ];
           var bibleLastReadingPath = '';
-          try { bibleLastReadingPath = sessionStorage.getItem('bibleLastReadingPath') || ''; } catch (_) {}
+          var bibleSelectedBookName = '';
+          try {
+            bibleLastReadingPath = sessionStorage.getItem('bibleLastReadingPath') || '';
+            bibleSelectedBookName = sessionStorage.getItem('bibleSelectedBookName') || '';
+          } catch (_) {}
           function bibleReadingPath(path) {
             return /^\/bible\/\d+(?:\/\d+)?(?:\/|$)/i.test(path || '');
           }
@@ -193,15 +197,20 @@ jobs:
           function syncBibleBookListScroll() {
             rememberBibleReadingPath();
             var path = location.pathname;
-            if (!bibleReadingPath(path)) {
-              try {
-                var saved = sessionStorage.getItem('bibleLastReadingPath') || bibleLastReadingPath;
-                if (saved && bibleReadingPath(saved)) path = saved;
-              } catch (_) {}
+            // While the book picker is open, the app may keep the previous reading URL.
+            // Prefer the book the user just tapped over that stale URL.
+            var book = bibleSelectedBookName;
+            if (!book) {
+              if (!bibleReadingPath(path)) {
+                try {
+                  var saved = sessionStorage.getItem('bibleLastReadingPath') || bibleLastReadingPath;
+                  if (saved && bibleReadingPath(saved)) path = saved;
+                } catch (_) {}
+              }
+              var m = path.match(/^\/bible\/(\d+)(?:\/(\d+))?(?:\/|$)/i);
+              if (!m) return;
+              book = bibleBookNames[Number(m[1]) - 1];
             }
-            var m = path.match(/^\/bible\/(\d+)(?:\/(\d+))?(?:\/|$)/i);
-            if (!m) return;
-            var book = bibleBookNames[Number(m[1]) - 1];
             if (!book) return;
             var candidates = [];
             Array.prototype.forEach.call(document.querySelectorAll('body *'), function(el) {
@@ -245,8 +254,23 @@ jobs:
             });
           }
           // Save the reading route before a click navigates from the reader to /bible (contents).
-          document.addEventListener('click', function() {
+          document.addEventListener('click', function(event) {
             rememberBibleReadingPath();
+            // Record an explicitly tapped book before the observer can reapply
+            // the previous route's book (for example, Matthew).
+            var node = event.target;
+            if (node && node.nodeType === 3) node = node.parentElement;
+            var el = node;
+            while (el && el !== document.body) {
+              var label = bibleLabel(el);
+              var picked = bibleBookNames.find(function(name) { return label === name; });
+              if (picked) {
+                bibleSelectedBookName = picked;
+                try { sessionStorage.setItem('bibleSelectedBookName', picked); } catch (_) {}
+                break;
+              }
+              el = el.parentElement;
+            }
             queueBibleListSync();
           }, true);
           window.addEventListener('popstate', queueBibleListSync);
