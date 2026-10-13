@@ -228,11 +228,9 @@ jobs:
             var chosen = candidates[0], target = chosen.el, scrollBox = chosen.scrollBox;
             if (scrollBox) {
               var tr = target.getBoundingClientRect(), sr = scrollBox.getBoundingClientRect();
-              var targetCenter = tr.top + tr.height / 2;
-              var listCenter = sr.top + scrollBox.clientHeight / 2;
-              // Always center the current book; do not leave it near the bottom just
-              // because it happens to be barely visible in the list viewport.
-              scrollBox.scrollTop += targetCenter - listCenter;
+              // Align the selected book to the top of the contents viewport,
+              // so Luke and other selected books are immediately visible at the top.
+              scrollBox.scrollTop += tr.top - sr.top - 8;
             } else {
               try { target.scrollIntoView({block:'center', inline:'nearest', behavior:'auto'}); }
               catch (_) { target.scrollIntoView(); }
