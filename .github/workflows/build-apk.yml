@@ -51,6 +51,11 @@ jobs:
           fi
           echo "BUILD_DIR=$(dirname "$SETTINGS_FILE")" >> "$GITHUB_ENV"
 
+      - name: Inspect activity source
+        shell: bash
+        run: |
+          sed -n '1,260p' "$BUILD_DIR/app/src/main/java/kr/co/srapp/bibleresume/MainActivity.kt"
+
       - name: Build debug APK
         shell: bash
         run: |
