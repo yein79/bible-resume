@@ -77,17 +77,17 @@ jobs:
               p = candidates[0]
           source = p.read_text()
           source = source.replace(
-              'import android.os.Bundle\\n',
-              'import android.os.Bundle\\nimport android.os.Build\\nimport android.view.WindowInsets\\nimport android.widget.FrameLayout\\n',
+              'import android.os.Bundle\n',
+              'import android.os.Bundle\nimport android.os.Build\nimport android.view.WindowInsets\nimport android.widget.FrameLayout\n',
               1
           ) if 'import android.widget.FrameLayout' not in source else source
           source = source.replace(
-              '        window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)\\n',
-              '        window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)\\n'
-              '        window.clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS)\\n'
-              '        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {\\n'
-              '            window.setDecorFitsSystemWindows(false)\\n'
-              '        }\\n',
+              '        window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)\n',
+              '        window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)\n'
+              '        window.clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS)\n'
+              '        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {\n'
+              '            window.setDecorFitsSystemWindows(false)\n'
+              '        }\n',
               1
           )
           old_listener = '''        webView.setOnApplyWindowInsetsListener { view, insets ->
@@ -96,7 +96,7 @@ jobs:
                   }
           '''
           source = source.replace(old_listener, '')
-          old_content = '        setContentView(webView)\\n'
+          old_content = '        setContentView(webView)\n'
           new_content = '''        val root = FrameLayout(this)
                   root.setOnApplyWindowInsetsListener { view, insets ->
                       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
