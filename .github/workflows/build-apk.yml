@@ -64,7 +64,7 @@ jobs:
                   raise SystemExit(f'Expected one MainActivity.kt, found {len(candidates)}')
               p = candidates[0]
           source = p.read_text()
-          anchor = '        webView = WebView(this)\\n'
+          anchor = '        webView = WebView(this)\n'
           patch_lines = [
               '        webView = WebView(this)',
               '        // Keep WebView content clear of Android system bars.',
@@ -73,7 +73,7 @@ jobs:
               '            insets',
               '        }',
           ]
-          patch = '\\n'.join(patch_lines) + '\\n'
+          patch = '\n'.join(patch_lines) + '\n'
           if 'setOnApplyWindowInsetsListener' not in source:
               if anchor not in source:
                   raise SystemExit('Could not locate WebView initialization; refusing unsafe patch.')
