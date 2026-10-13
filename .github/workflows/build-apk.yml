@@ -31,7 +31,7 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: '8.7'
+          gradle-version: '8.9'
 
       - name: Extract Android project
         shell: bash
@@ -41,12 +41,15 @@ jobs:
           mkdir -p project
           unzip -q bible-resume-android-project.zip -d project
           find project -type f | sort
-          BUILD_FILE="$(find project -type f \( -name build.gradle -o -name build.gradle.kts \) -print -quit)"
-          if [ -z "$BUILD_FILE" ]; then
-            echo "::error::No Gradle build file found in ZIP."
+          SETTINGS_FILE="$(find project -type f -name settings.gradle.kts -print -quit)"
+          if [ -z "$SETTINGS_FILE" ]; then
+            SETTINGS_FILE="$(find project -type f -name settings.gradle -print -quit)"
+          fi
+          if [ -z "$SETTINGS_FILE" ]; then
+            echo "::error::No Gradle settings file found in ZIP."
             exit 1
           fi
-          echo "BUILD_DIR=$(dirname "$BUILD_FILE")" >> "$GITHUB_ENV"
+          echo "BUILD_DIR=$(dirname "$SETTINGS_FILE")" >> "$GITHUB_ENV"
 
       - name: Build debug APK
         shell: bash
