@@ -162,8 +162,17 @@ jobs:
             '에베소서','빌립보서','골로새서','데살로니가전서','데살로니가후서','디모데전서','디모데후서','디도서',
             '빌레몬서','히브리서','야고보서','베드로전서','베드로후서','요한일서','요한이서','요한삼서','유다서','요한계시록'
           ];
-          var bibleListSyncedRoute = '';
-          var bibleListSyncQueued = false;
+          var bibleLastReadingPath = '';
+          try { bibleLastReadingPath = sessionStorage.getItem('bibleLastReadingPath') || ''; } catch (_) {}
+          function bibleReadingPath(path) {
+            return /^\/bible\/\d+(?:\/\d+)?(?:\/|$)/i.test(path || '');
+          }
+          function rememberBibleReadingPath() {
+            if (bibleReadingPath(location.pathname)) {
+              bibleLastReadingPath = location.pathname;
+              try { sessionStorage.setItem('bibleLastReadingPath', bibleLastReadingPath); } catch (_) {}
+            }
+          }
           function bibleLabel(el) {
             return (el && (el.innerText || el.textContent) || '').replace(/[\s\u00a0]+/g, '').trim();
           }
@@ -172,67 +181,86 @@ jobs:
             var s = window.getComputedStyle(el);
             return s.display !== 'none' && s.visibility !== 'hidden' && Number(s.opacity || 1) > 0;
           }
+          function bibleScrollableAncestor(el) {
+            var p = el && el.parentElement;
+            while (p && p !== document.body && p !== document.documentElement) {
+              var ps = window.getComputedStyle(p);
+              if (/(auto|scroll|overlay)/.test(ps.overflowY) && p.scrollHeight > p.clientHeight + 8) return p;
+              p = p.parentElement;
+            }
+            return null;
+          }
           function syncBibleBookListScroll() {
-            var m = location.pathname.match(/^\/bible\/(\d+)(?:\/(\d+))?(?:\/|$)/i);
-            if (!m) { bibleListSyncedRoute = ''; return; }
-            var routeKey = m[1] + '/' + (m[2] || '');
+            rememberBibleReadingPath();
+            var path = location.pathname;
+            if (!bibleReadingPath(path)) {
+              try {
+                var saved = sessionStorage.getItem('bibleLastReadingPath') || bibleLastReadingPath;
+                if (saved && bibleReadingPath(saved)) path = saved;
+              } catch (_) {}
+            }
+            var m = path.match(/^\/bible\/(\d+)(?:\/(\d+))?(?:\/|$)/i);
+            if (!m) return;
             var book = bibleBookNames[Number(m[1]) - 1];
             if (!book) return;
             var candidates = [];
             Array.prototype.forEach.call(document.querySelectorAll('body *'), function(el) {
               if (!bibleNodeVisible(el)) return;
               var label = bibleLabel(el);
-              if (!label || label.length > 32 || (label !== book && label.indexOf(book) !== 0)) return;
-              candidates.push(el);
+              if (!label || label.length > 36 || (label !== book && label.indexOf(book) !== 0)) return;
+              var rect = el.getBoundingClientRect();
+              if (rect.width < 2 || rect.height < 2) return;
+              candidates.push({
+                el: el,
+                exact: label === book,
+                scrollBox: bibleScrollableAncestor(el),
+                area: rect.width * rect.height
+              });
             });
             if (!candidates.length) return;
-            // Pick the smallest visible node whose label matches the current book.
+            // Prefer the matching book entry inside the scrollable contents list,
+            // rather than a page heading or a hidden duplicate elsewhere in the DOM.
             candidates.sort(function(a, b) {
-              var ar = a.getBoundingClientRect(), br = b.getBoundingClientRect();
-              return ar.width * ar.height - br.width * br.height;
+              if (!!a.scrollBox !== !!b.scrollBox) return a.scrollBox ? -1 : 1;
+              if (a.exact !== b.exact) return a.exact ? -1 : 1;
+              return a.area - b.area;
             });
-            var target = candidates[0];
-            var p = target.parentElement, scrollBox = null;
-            while (p && p !== document.body && p !== document.documentElement) {
-              var ps = window.getComputedStyle(p);
-              if (/(auto|scroll|overlay)/.test(ps.overflowY) && p.scrollHeight > p.clientHeight + 8) {
-                scrollBox = p; break;
-              }
-              p = p.parentElement;
-            }
+            var chosen = candidates[0], target = chosen.el, scrollBox = chosen.scrollBox;
             if (scrollBox) {
               var tr = target.getBoundingClientRect(), sr = scrollBox.getBoundingClientRect();
-              if (tr.top < sr.top || tr.bottom > sr.bottom) {
-                scrollBox.scrollTop += tr.top < sr.top ? tr.top - sr.top - 12 : tr.bottom - sr.bottom + 12;
-              }
+              var targetCenter = tr.top + tr.height / 2;
+              var listCenter = sr.top + scrollBox.clientHeight / 2;
+              // Always center the current book; do not leave it near the bottom just
+              // because it happens to be barely visible in the list viewport.
+              scrollBox.scrollTop += targetCenter - listCenter;
             } else {
               try { target.scrollIntoView({block:'center', inline:'nearest', behavior:'auto'}); }
               catch (_) { target.scrollIntoView(); }
             }
-            bibleListSyncedRoute = routeKey;
           }
           function queueBibleListSync() {
-            if (bibleListSyncQueued) return;
-            bibleListSyncQueued = true;
-            requestAnimationFrame(function() {
-              bibleListSyncQueued = false;
-              syncBibleBookListScroll();
+            [0, 80, 220, 500].forEach(function(delay) {
+              setTimeout(function() {
+                rememberBibleReadingPath();
+                syncBibleBookListScroll();
+              }, delay);
             });
           }
-          var bibleListObserver = new MutationObserver(queueBibleListSync);
+          // Save the reading route before a click navigates from the reader to /bible (contents).
+          document.addEventListener('click', function() {
+            rememberBibleReadingPath();
+            queueBibleListSync();
+          }, true);
+          window.addEventListener('popstate', queueBibleListSync);
+          window.addEventListener('hashchange', queueBibleListSync);
+          var bibleListObserver = new MutationObserver(function() {
+            rememberBibleReadingPath();
+            syncBibleBookListScroll();
+          });
           bibleListObserver.observe(document.documentElement, {
             childList:true, subtree:true, attributes:true,
             attributeFilter:['class','style','aria-hidden','aria-selected']
           });
-          window.addEventListener('popstate', function() { bibleListSyncedRoute = ''; queueBibleListSync(); });
-          window.addEventListener('hashchange', function() { bibleListSyncedRoute = ''; queueBibleListSync(); });
-          document.addEventListener('click', function() {
-            // Re-check after the contents drawer has finished opening/rendering.
-            bibleListSyncedRoute = '';
-            setTimeout(queueBibleListSync, 60);
-            setTimeout(queueBibleListSync, 250);
-            setTimeout(queueBibleListSync, 700);
-          }, true);
           queueBibleListSync();
           """
           if "function syncBibleBookListScroll()" not in source:
