@@ -88,7 +88,7 @@ jobs:
           # Distinguish the Bible table-of-contents route (/bible) from an actual reading
           # position (/bible/{book}/{chapter}). Only reading routes may overwrite the saved position.
           reading_match = "function isBiblePath(path) { return /^\\/bible(?:\\/|$)/i.test(path || ''); }"
-          reading_helpers = reading_match + "\\n          function isBibleReadingPath(path) { return /^\\/bible\\/\\d+\\/\\d+(?:\\/|$)/i.test(path || ''); }"
+          reading_helpers = reading_match + "\n          function isBibleReadingPath(path) { return /^\\/bible\\/\\d+\\/\\d+(?:\\/|$)/i.test(path || ''); }"
           if "function isBibleReadingPath(path)" not in source:
               if reading_match not in source:
                   raise SystemExit('Could not locate broad Bible route matcher for reading-position patch.')
