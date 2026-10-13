@@ -64,7 +64,7 @@ jobs:
                   raise SystemExit(f'Expected one MainActivity.kt, found {len(candidates)}')
               p = candidates[0]
           source = p.read_text()
-          anchor = '        webView = WebView(this)\n'
+          anchor = 'webView = WebView(this)'
           patch_lines = [
               'webView = WebView(this)',
               '        // Keep WebView content clear of Android system bars.',
