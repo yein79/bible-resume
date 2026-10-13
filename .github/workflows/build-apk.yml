@@ -76,22 +76,50 @@ jobs:
                   raise SystemExit(f'Expected one MainActivity.kt, found {len(candidates)}')
               p = candidates[0]
           source = p.read_text()
-          anchor = 'webView = WebView(this)'
-          patch_lines = [
-              'webView = WebView(this)',
-              '        // Keep WebView content clear of Android system bars.',
-              '        webView.setOnApplyWindowInsetsListener { view, insets ->',
-              '            view.setPadding(insets.systemWindowInsetLeft, insets.systemWindowInsetTop, insets.systemWindowInsetRight, insets.systemWindowInsetBottom)',
-              '            insets',
-              '        }',
-          ]
-          patch = '\n'.join(patch_lines) + '\n'
-          if 'setOnApplyWindowInsetsListener' not in source:
-              if anchor not in source:
-                  raise SystemExit('Could not locate WebView initialization; refusing unsafe patch.')
-              source = source.replace(anchor, patch, 1)
-              p.write_text(source)
-          print(f'Applied system-bar inset fix to {p}')
+          source = source.replace(
+              'import android.os.Bundle\\n',
+              'import android.os.Bundle\\nimport android.os.Build\\nimport android.view.WindowInsets\\nimport android.widget.FrameLayout\\n',
+              1
+          ) if 'import android.widget.FrameLayout' not in source else source
+          source = source.replace(
+              '        window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)\\n',
+              '        window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)\\n'
+              '        window.clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS)\\n'
+              '        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {\\n'
+              '            window.setDecorFitsSystemWindows(false)\\n'
+              '        }\\n',
+              1
+          )
+          old_listener = '''        webView.setOnApplyWindowInsetsListener { view, insets ->
+                      view.setPadding(insets.systemWindowInsetLeft, insets.systemWindowInsetTop, insets.systemWindowInsetRight, insets.systemWindowInsetBottom)
+                      insets
+                  }
+          '''
+          source = source.replace(old_listener, '')
+          old_content = '        setContentView(webView)\\n'
+          new_content = '''        val root = FrameLayout(this)
+                  root.setOnApplyWindowInsetsListener { view, insets ->
+                      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                          val bars = insets.getInsets(WindowInsets.Type.systemBars())
+                          view.setPadding(bars.left, bars.top, bars.right, bars.bottom)
+                      } else {
+                          @Suppress("DEPRECATION")
+                          view.setPadding(insets.systemWindowInsetLeft, insets.systemWindowInsetTop, insets.systemWindowInsetRight, insets.systemWindowInsetBottom)
+                      }
+                      insets
+                  }
+                  root.addView(webView, FrameLayout.LayoutParams(
+                      ViewGroup.LayoutParams.MATCH_PARENT,
+                      ViewGroup.LayoutParams.MATCH_PARENT
+                  ))
+                  setContentView(root)
+          '''
+          if old_content in source and 'root.setOnApplyWindowInsetsListener' not in source:
+              source = source.replace(old_content, new_content, 1)
+          elif 'root.setOnApplyWindowInsetsListener' not in source:
+              raise SystemExit('Could not locate setContentView(webView); refusing unsafe patch.')
+          p.write_text(source)
+          print(f'Applied root-container system-bar inset fix to {p}')
           PY
 
       - name: Build debug APK
