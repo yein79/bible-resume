@@ -51,6 +51,18 @@ jobs:
           fi
           echo "BUILD_DIR=$(dirname "$SETTINGS_FILE")" >> "$GITHUB_ENV"
 
+      - name: Inspect app window and navigation layout
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo '===== MainActivity.kt ====='
+          sed -n '1,240p' "$BUILD_DIR/app/src/main/java/kr/co/srapp/bibleresume/MainActivity.kt"
+          echo '===== Manifest ====='
+          sed -n '1,220p' "$BUILD_DIR/app/src/main/AndroidManifest.xml"
+          echo '===== Layout and web assets ====='
+          find "$BUILD_DIR/app/src/main" -type f | sort
+          find "$BUILD_DIR/app/src/main" -type f \( -name '*.html' -o -name '*.css' -o -name '*.js' -o -name '*.xml' \) -print
+
       - name: Fix system navigation overlap
         shell: bash
         run: |
