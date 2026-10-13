@@ -234,8 +234,7 @@ jobs:
             setTimeout(queueBibleListSync, 700);
           }, true);
           queueBibleListSync();
-"""
-
+          """
           if "function syncBibleBookListScroll()" not in source:
               if scroll_marker not in source:
                   raise SystemExit('Could not locate safe route-monitor insertion point.')
