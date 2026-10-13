@@ -51,10 +51,39 @@ jobs:
           fi
           echo "BUILD_DIR=$(dirname "$SETTINGS_FILE")" >> "$GITHUB_ENV"
 
-      - name: Inspect activity source
+      - name: Fix system navigation overlap
         shell: bash
         run: |
-          sed -n '1,260p' "$BUILD_DIR/app/src/main/java/kr/co/srapp/bibleresume/MainActivity.kt"
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('project/bible-resume-android/app/src/main/java/kr/co/srapp/bibleresume/MainActivity.kt')
+          if not p.exists():
+              candidates = list(Path('project').glob('**/MainActivity.kt'))
+              if len(candidates) != 1:
+                  raise SystemExit(f'Expected one MainActivity.kt, found {len(candidates)}')
+              p = candidates[0]
+          source = p.read_text()
+          anchor = '        webView = WebView(this)\n'
+          patch = '''        webView = WebView(this)
+        // Keep WebView content clear of Android's status and navigation bars.
+        webView.setOnApplyWindowInsetsListener { view, insets ->
+            view.setPadding(
+                insets.systemWindowInsetLeft,
+                insets.systemWindowInsetTop,
+                insets.systemWindowInsetRight,
+                insets.systemWindowInsetBottom
+            )
+            insets
+        }
+'''
+          if 'setOnApplyWindowInsetsListener' not in source:
+              if anchor not in source:
+                  raise SystemExit('Could not locate WebView initialization; refusing unsafe patch.')
+              source = source.replace(anchor, patch, 1)
+              p.write_text(source)
+          print(f'Applied system-bar inset fix to {p}')
+          PY
 
       - name: Build debug APK
         shell: bash
