@@ -217,7 +217,7 @@ jobs:
             attributeFilter: ['class','style','aria-hidden','aria-selected']
           });
           syncBibleBookListScroll();
-"""
+          """
           if "function syncBibleBookListScroll()" not in source:
               if scroll_marker not in source:
                   raise SystemExit('Could not locate safe route-monitor insertion point.')
